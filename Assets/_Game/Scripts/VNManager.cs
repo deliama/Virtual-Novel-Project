@@ -47,6 +47,7 @@ public class VNManager : Singleton<VNManager>
     private readonly string filePath = Constants.STORY_PATH;
     private readonly string defaultStoryName = Constants.DEFAULT_STORY_NAME;
     private readonly string excelExtension = Constants.STORY_EXTENSION;
+    private readonly int defaultStartLine = Constants.DEFAULT_START_LINE_COUNT;
     private List<ExcelReader.ExcelData> storyData;
 
     //存档相关数据
@@ -61,6 +62,7 @@ public class VNManager : Singleton<VNManager>
     
     private bool isAutoPlay = false;
     private bool isSkip = false;
+    private bool isLoad = false;
     private int maxReachedLine;
     private string currentStoryName;
     private Dictionary<string, int> globalMaxReachedLines = new();
@@ -104,9 +106,9 @@ public class VNManager : Singleton<VNManager>
             Directory.CreateDirectory(saveFolderPath);
         }
     }
-    void InitializeAndLoadStory(string filePath)
+    void InitializeAndLoadStory(string filePath,int lineNumber)
     {
-        currentLine = Constants.DEFAULT_START_LINE_COUNT;
+        currentLine = lineNumber;
         
         backgroundImage.gameObject.SetActive(false);
         bgmAudio.gameObject.SetActive(false);
@@ -118,7 +120,14 @@ public class VNManager : Singleton<VNManager>
         avatarImage.gameObject.SetActive(false);
         choicePanel.SetActive(false);
         LoadStoryFromFile(filePath);
+
+        if (isLoad)
+        {
+            RecoverLastBGAndCharacter();
+            isLoad = false;
+        }
         
+        DisplayNextLine();
     }
 
     void BottomButtonsAddListener()
@@ -135,7 +144,7 @@ public class VNManager : Singleton<VNManager>
 
     public void StartGame()
     {
-        InitializeAndLoadStory(defaultStoryName);
+        InitializeAndLoadStory(defaultStoryName,defaultStartLine);
     }
     
     private void LoadStoryFromFile(string storyPath)
@@ -265,6 +274,31 @@ public class VNManager : Singleton<VNManager>
         return !string.IsNullOrEmpty(str);
     }
 
+    void RecoverLastBGAndCharacter()
+    {
+        var data  = storyData[currentLine];
+        if (NotNullNorEmpty(data.lastBackgrouondImage))
+        {
+            UpdateBackgroundImage(data.lastBackgrouondImage);
+        }
+
+        if (NotNullNorEmpty(data.lastBackgroundMusic))
+        {
+            PlayBackgroundMusic(data.lastBackgroundMusic);
+        }
+
+        if (data.cha1Action != Constants.CHARACTER_IMAGE_APPEAR
+            && NotNullNorEmpty(data.cha1Image))
+        {
+            UpdateCharacterImage(Constants.CHARACTER_IMAGE_APPEAR,data.cha1Image,cha1Image,data.lastCoordinateX1);
+        }
+
+        if (data.cha2Action != Constants.CHARACTER_IMAGE_APPEAR
+            && NotNullNorEmpty(data.cha2Image))
+        {
+            UpdateCharacterImage(Constants.CHARACTER_IMAGE_APPEAR,data.cha2Image,cha2Image,data.lastCoordinateX2);
+        }
+    }
     
     #endregion
     
@@ -282,9 +316,9 @@ public class VNManager : Singleton<VNManager>
         
         //重新添加监听者，按照excel表格中存储的顺序的列的名称读取
         choiceButton1.GetComponentInChildren<TextMeshProUGUI>().text = data.content;
-        choiceButton1.onClick.AddListener(()=>InitializeAndLoadStory(data.avatorImageFileName));
+        choiceButton1.onClick.AddListener(()=>InitializeAndLoadStory(data.avatorImageFileName,defaultStartLine));
         choiceButton2.GetComponentInChildren<TextMeshProUGUI>().text = data.vocalAudioFileName;
-        choiceButton2.onClick.AddListener(()=>InitializeAndLoadStory(data.backgroundImageFileName));
+        choiceButton2.onClick.AddListener(()=>InitializeAndLoadStory(data.backgroundImageFileName,defaultStartLine));
         
         
     }
@@ -317,7 +351,7 @@ public class VNManager : Singleton<VNManager>
                 UpdateImage(imagePath, image);
                 Vector2 newPosition = new Vector2(float.Parse(coorX),image.rectTransform.anchoredPosition.y);
                 image.rectTransform.anchoredPosition = newPosition;
-                image.DOFade(1f,fadeDuration).From(0);
+                image.DOFade(1f, (isLoad?0:Constants.DEFAULT_FADE_DURATION)).From(0);
             }
             else
             {
@@ -501,8 +535,10 @@ public class VNManager : Singleton<VNManager>
     {
         var saveData = new SaveData
         {
-            currentSpeakingContent = currentSpeakingContent,
-            screenshotData = screenshotData,
+            saveCurrentLine = currentLine,
+            saveCurrentStory = currentStoryName,
+            saveCurrentSpeakingContent = currentSpeakingContent,
+            saveScreenshotData = screenshotData,
         };
         string savePath = Path.Combine(saveFolderPath,slotIndex+Constants.SAVE_FILE_EXTENSION);
         string json =  JsonConvert.SerializeObject(saveData, Formatting.Indented);
@@ -511,18 +547,34 @@ public class VNManager : Singleton<VNManager>
 
     public class SaveData
     {
-        public string currentSpeakingContent;
-        public byte[] screenshotData;
+        public int saveCurrentLine;
+        public string saveCurrentStory;
+        public string saveCurrentSpeakingContent;
+        public byte[] saveScreenshotData;
     }
 
     void OnClickLoad()
     {
-        SaveLoadManager.Instance.ShowSavePanel(LoadGame);
+        //SaveLoadManager.Instance.ShowSavePanel(LoadGame);
+        ShowLoadPanel(null);
+    }
+
+    public void ShowLoadPanel(Action action)
+    {
+        SaveLoadManager.Instance.ShowLoadPanel(LoadGame,action);
     }
 
     void LoadGame(int slotIndex)
     {
-        
+        string savePath = Path.Combine(saveFolderPath, slotIndex+Constants.SAVE_FILE_EXTENSION);
+        if (File.Exists(savePath))
+        {
+            isLoad = true;
+            string json  = File.ReadAllText(savePath);
+            var saveData = JsonConvert.DeserializeObject<SaveData>(json);
+            var lineNumber = saveData.saveCurrentLine - 1;
+            InitializeAndLoadStory(saveData.saveCurrentStory,lineNumber);
+        }
     }
 
     #endregion

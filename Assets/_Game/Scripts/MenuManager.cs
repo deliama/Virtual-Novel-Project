@@ -25,22 +25,32 @@ public class MenuManager : Singleton<MenuManager>
     {
         m_startGameButton.onClick.AddListener(StartGame);
         m_continueGameButton.onClick.AddListener(ContinueGame);
+        m_loadGameButton.onClick.AddListener(LoadGame);
     }
 
     void StartGame()
     {
         m_hasStarted = true;
         VNManager.Instance.StartGame();
-        m_menuPanel.SetActive(false);
-        VNManager.Instance.gamePanel.SetActive(true);
+        ShowGamePanel();
     }
 
     void ContinueGame()
     {
         if (m_hasStarted)
         {
-            m_menuPanel.SetActive(false);
-            VNManager.Instance.gamePanel.SetActive(true);
+            ShowGamePanel();
         }
+    }
+
+    void LoadGame()
+    {
+        VNManager.Instance.ShowLoadPanel(ShowGamePanel);
+    }
+
+    void ShowGamePanel()
+    {
+        m_menuPanel.SetActive(false);
+        VNManager.Instance.gamePanel.SetActive(true);
     }
 }

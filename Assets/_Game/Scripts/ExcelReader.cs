@@ -21,6 +21,10 @@ public class ExcelReader : MonoBehaviour
         public string cha2Image;
         public string cha1CoorX;
         public string cha2CoorX;
+        public string lastBackgrouondImage;
+        public string lastBackgroundMusic;
+        public string lastCoordinateX1;
+        public string lastCoordinateX2;
     }
 
     public static List<ExcelData> ReadExcel(string filePath)
@@ -49,6 +53,10 @@ public class ExcelReader : MonoBehaviour
                         data.cha2Action = reader.IsDBNull(9) ? string.Empty : reader.GetValue(9).ToString();
                         data.cha2CoorX = reader.IsDBNull(10) ? string.Empty : reader.GetValue(10).ToString();
                         data.cha2Image = reader.IsDBNull(11) ? string.Empty : reader.GetValue(11).ToString();
+                        data.lastBackgrouondImage = reader.IsDBNull(12) ? string.Empty : reader.GetValue(12).ToString();
+                        data.lastBackgroundMusic = reader.IsDBNull(13) ? string.Empty : reader.GetValue(13).ToString();
+                        data.lastCoordinateX1 = reader.IsDBNull(14) ? string.Empty : reader.GetValue(14).ToString();
+                        data.lastCoordinateX2 = reader.IsDBNull(15) ? string.Empty : reader.GetValue(15).ToString();
                         excelData.Add(data);
                     }
                 }while(reader.NextResult());

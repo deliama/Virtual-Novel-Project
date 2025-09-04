@@ -66,6 +66,7 @@ public class VNManager : Singleton<VNManager>
     private int maxReachedLine;
     private string currentStoryName;
     private Dictionary<string, int> globalMaxReachedLines = new();
+    private LinkedList<string> historyRecords = new();
     
     #endregion
 
@@ -81,15 +82,36 @@ public class VNManager : Singleton<VNManager>
     {
         if (!MenuManager.Instance.m_menuPanel.activeSelf
             && !SaveLoadManager.Instance.m_saveLoadPanel.activeSelf
-            && gamePanel.activeSelf && Input.GetKeyDown(KeyCode.Mouse0))
+            && !HistoryManager.Instance.historyScrollView.activeSelf
+            && gamePanel.activeSelf)
         {
-            if (!dialoguePanel.activeSelf)
+            if (Input.GetKeyDown(KeyCode.Mouse0) || Input.GetKeyDown(KeyCode.Space))
             {
-                OpenUI();
+                if (!dialoguePanel.activeSelf)
+                {
+                    OpenUI();
+                }
+                else if(!IsHittingBottomButtons())
+                {
+                    DisplayNextLine();
+                }
             }
-            else if(!IsHittingBottomButtons())
+
+            if (Input.GetKeyDown(KeyCode.Escape))
             {
-                DisplayNextLine();
+                if (!dialoguePanel.activeSelf)
+                {
+                    OpenUI();
+                }
+                else
+                {
+                    CloseUI();
+                }
+            }
+
+            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+            {
+                CtrlSkip();
             }
         }
     }
@@ -136,7 +158,7 @@ public class VNManager : Singleton<VNManager>
         skipButton.onClick.AddListener(OnClickSkip);
         saveButton.onClick.AddListener(OnClickSave);
         loadButton.onClick.AddListener(OnClickLoad);
-        
+        historyButton.onClick.AddListener(OnClickHistory);
         
         homeButton.onClick.AddListener(OnClickHome);
         closeButton.onClick.AddListener(OnClickClose);
@@ -226,6 +248,9 @@ public class VNManager : Singleton<VNManager>
         currentSpeakingContent = data.content;
         //显示说话内容
         typerwriterEffect.StartTyping(currentSpeakingContent,currentTypeInterval);
+        
+        //记录历史文本
+        RecordHistory(speakerName.text, currentSpeakingContent);
         
         //显示说话人头像
         if (NotNullNorEmpty(data.avatorImageFileName))
@@ -502,6 +527,21 @@ public class VNManager : Singleton<VNManager>
         //更新UI
         UpdateButtonImage(Constants.SKIP_OFF, skipButton);
     }
+
+    void CtrlSkip()
+    {
+        currentTypeInterval = Constants.SKIP_MODE_TYPING_INTERVAL;
+        StartCoroutine(SkipWhilePressingCtrl());
+    }
+
+    IEnumerator SkipWhilePressingCtrl()
+    {
+        while (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+        {
+            DisplayNextLine();
+            yield return new WaitForSeconds(Constants.DEFAULT_SKIP_WAITING_SECONDS);
+        }
+    }
     
     IEnumerator SkipToMaxReachedLine()
     {
@@ -539,6 +579,7 @@ public class VNManager : Singleton<VNManager>
             saveCurrentStory = currentStoryName,
             saveCurrentSpeakingContent = currentSpeakingContent,
             saveScreenshotData = screenshotData,
+            saveHistoryRecord = historyRecords
         };
         string savePath = Path.Combine(saveFolderPath,slotIndex+Constants.SAVE_FILE_EXTENSION);
         string json =  JsonConvert.SerializeObject(saveData, Formatting.Indented);
@@ -551,6 +592,7 @@ public class VNManager : Singleton<VNManager>
         public string saveCurrentStory;
         public string saveCurrentSpeakingContent;
         public byte[] saveScreenshotData;
+        public LinkedList<string> saveHistoryRecord;
     }
 
     void OnClickLoad()
@@ -572,6 +614,8 @@ public class VNManager : Singleton<VNManager>
             isLoad = true;
             string json  = File.ReadAllText(savePath);
             var saveData = JsonConvert.DeserializeObject<SaveData>(json);
+            historyRecords = saveData.saveHistoryRecord;
+            historyRecords.RemoveLast();    //防止最后一条记录存两遍
             var lineNumber = saveData.saveCurrentLine - 1;
             InitializeAndLoadStory(saveData.saveCurrentStory,lineNumber);
         }
@@ -605,6 +649,24 @@ public class VNManager : Singleton<VNManager>
         bottomButtons.SetActive(false);
     }
     
+    #endregion
+    
+    #region History
+
+    void OnClickHistory()
+    {
+        HistoryManager.Instance.ShowHistory(historyRecords);
+    }
+    
+    void RecordHistory(string speaker, string content)
+    {
+        string historyRecord = speaker + Constants.COLON + content;
+        if (historyRecords.Count >= Constants.MAX_RECORDS_LENGTH)
+        {
+            historyRecords.RemoveFirst();
+        }
+        historyRecords.AddLast(historyRecord);
+    }
     #endregion
 
     #region Bottom

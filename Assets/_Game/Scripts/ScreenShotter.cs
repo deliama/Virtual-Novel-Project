@@ -30,6 +30,7 @@ public class ScreenShotter : MonoBehaviour
         //读取像素数据
         Texture2D screenshot = new Texture2D(width, height, TextureFormat.RGB24, false);
         screenshot.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+        //VITAL:ReadPixels是在GPU上完成的，写入了在GPU上的副本，要想传到CPU，则还需要Apply函数
         screenshot.Apply();
         
         //重置渲染目标并释放资源
@@ -69,6 +70,7 @@ public class ScreenShotter : MonoBehaviour
         //读取缩放后的纹理数据
         Texture2D result = new Texture2D(newWidth, newHeight,TextureFormat.RGB24, false);
         result.ReadPixels(new Rect(0, 0, newWidth, newHeight), 0, 0);
+        //ReadPixels是在GPU上完成的，写入了在GPU上的副本，要想传到CPU，则还需要Apply函数
         result.Apply();
         
         //释放资源

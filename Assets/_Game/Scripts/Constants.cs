@@ -26,6 +26,8 @@ public class Constants
     public static string END_OF_STORY = "End of Story";
     public static string CHOICE = "Choice";
     
+    public static int MAX_RECORDS_LENGTH = 100;
+    
     public static float DEFAULT_WAITTING_SECONDS = 0.05f;
     public static int DEFAULT_START_LINE_COUNT = 1;
     public static float DEFAULT_FADE_DURATION = 0.5f;

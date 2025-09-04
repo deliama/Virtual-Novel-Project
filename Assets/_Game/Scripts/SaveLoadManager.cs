@@ -20,6 +20,7 @@ public class SaveLoadManager : Singleton<SaveLoadManager>
     private int m_slotsPerPage = Constants.SLOT_PER_PAGE;
     private int m_totalSlots = Constants.TOTAL_SLOTS;
 
+    //当前执行保存还是加载的操作
     private Action<int> m_currentAction;
     private Action m_menuAction;
 
@@ -69,10 +70,11 @@ public class SaveLoadManager : Singleton<SaveLoadManager>
             int slotIndex = m_currentPage * m_slotsPerPage + i;
             if (slotIndex < m_totalSlots)
             {
+                //VITAL:先将按钮置为没有存档的样子，再读取数据，如果有存档，他就更新该按钮组件
                 UpdateSaveLoadButtons(m_saveLoadButtons[i],slotIndex);
                 LoadStorylineAndScreenshots(m_saveLoadButtons[i],slotIndex);
-                m_saveLoadButtons[i].gameObject.SetActive(true);
-                m_saveLoadButtons[i].interactable = true;
+                // m_saveLoadButtons[i].gameObject.SetActive(true);
+                // m_saveLoadButtons[i].interactable = true;
                 
                 
             }
@@ -91,6 +93,7 @@ public class SaveLoadManager : Singleton<SaveLoadManager>
         var savePath = GenerateDataPath(index);
         var fileExist = File.Exists(savePath);
 
+        //若在加载模式下并且存档不存在，则不可交互
         if (!m_isSave && !fileExist)
         {
             button.interactable = false;
